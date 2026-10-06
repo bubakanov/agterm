@@ -61,6 +61,8 @@ The event kinds and payloads are:
   presence in the local tree, never the ssh connection: undo re-emits `remote.opened`, and an ssh that
   died leaves the row holding its exit line until it is closed. Closing a remote split pane alone emits
   neither.
+- `subagent`: session `name`, the subagent id as `agent`, its description as `title`, and `status` with the
+  `previous` one, emitted when a row starts or changes status. Activity-only updates emit nothing.
 
 Every event has `seq` (app-wide sequence), `ts` (Unix timestamp), `kind`, optional
 `window`/`workspace`/`session` ids, and `payload`. Human mode prints one compact line. `--json` emits
@@ -236,7 +238,9 @@ position?, repeats?}` object; `kind` is `image`/`text`/`color` — omitted when 
 scratch?}` object of the same specs; an absent pane inherits `background`; never the effective value;
 omitted when no pane has one), `unseen`
 (the unseen-notification badge count — raised by `notify`/OSC 9/777, cleared by `session seen` — omitted
-when zero), `fontSize`/`splitFontSize`/`scratchFontSize` (the LIVE font size in points of each pane —
+when zero), `subagents` (the session's subagent rows, oldest first: `{id, type?, description?, status,
+activity?, startedAt, endedAt?, transcript?}` with epoch-second times; omitted when none) and
+`subagentsDropped` (rows the 50-row cap evicted, omitted when none), `fontSize`/`splitFontSize`/`scratchFontSize` (the LIVE font size in points of each pane —
 the read side of `font --pane`; each omitted when that pane isn't realized. `fontSize` tracks the
 default/left target (the main pane, or the promoted split survivor once the primary exits — the same pane
 `font --pane left` writes); only the main pane's size survives a relaunch, so the split/scratch sizes and a
@@ -707,6 +711,28 @@ error keeps those names for compatibility.
   session. Idempotent — a no-op when the badge is already zero. Read the current count from the tree node's
   `unseen` field. This lets an orchestrator acknowledge a driven session's notifications over the socket
   while keeping the badge a real attention signal on the sessions a human tends.
+- `session subagent <start|update|stop|remove|open> <ID> | <finish|clear> | end [CONV] | conversation <CONV> [--type T]
+  [--description D] [--activity A] [--status active|blocked|completed] [--transcript PATH]
+  [--conversation CONV] [--target] [--window W]` — report
+  the subagents an agent in the session spawned, drawn as child rows under the session's sidebar row. ID is
+  the agent's own id for the subagent. `start` adds a running row, or with `--status completed` records one
+  that already ran, refreshing a known row without resetting its times; `update` changes any field (`--activity`
+  is shown only while it runs); `stop` completes it; `finish` completes every running row, for a turn that
+  ended; `end` also hides the conversation's rows, for an agent that exited, and with a
+  conversation id it acts only when that is the current conversation (otherwise it completes that one's rows); `remove`/`clear` drop one or all; `open` pages the transcript in a terminal overlay over the session, replacing a
+  transcript already open there.
+  `start --conversation C` tags a row with the agent's conversation and `conversation C` switches the
+  session to it: the sidebar shows only the current conversation's rows (untagged rows always), and the
+  others stay saved for when that conversation is resumed. Read back `subagentConversation`.
+  While Settings ▸ Agent Status ▸ Show subagents is off, `start`/`update` answer ok with the note
+  `Show subagents is off; nothing recorded` and change nothing. While any row runs, the session's own
+  `completed` status reads `active` and is applied when the last row ends. Rows show while their
+  conversation runs: `end` (the agent exited) and a relaunch hide tagged rows until `conversation` or a
+  `start` names that conversation again. They persist with the session and end when it is deleted; a finished row whose transcript file was
+  deleted is dropped, while one the agent has not written yet stays. The bundled Claude Code and Codex hooks call this; other agents and scripts can too. Read back the node's
+  `subagents`/`subagentsDropped`.
+- `subagents [on|off|toggle]` — read (bare) or set Show subagents; app-wide, so no window. Prints `on` or
+  `off`. Read back as the tree's top-level `subagentRows`.
 - `session restore (<command> | --none | --clear) [--pane left|right] [--pane-id TOKEN] [--target] [--window W]`
   — pin the command a pane re-runs on the NEXT launch, overriding the captured foreground. Provide exactly
   one of: a `<command>` shell line to pin, `--none` to pin nothing (the pane restores a plain shell,

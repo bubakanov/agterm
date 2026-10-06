@@ -1,15 +1,15 @@
 ---
 name: agterm
 description: >
-  Drive agterm, a native macOS terminal, via the agtermctl CLI. Use inside an agterm session when
-  asked to control it: create, rename, close, select or
+  Drive agterm, a native macOS terminal, via agtermctl. Use inside an agterm session to
+  control it: create, rename, close, select or
   reorder sessions and workspaces; split panes; toggle the scratch terminal; run overlay programs
   and read their exit status; create and show HTML pages, interactive too, URLs or dev servers in an overlay with saved logins;
   post a HUD/caption or notification; show a picker or question dialog; display an image inline; type
   into or restart a pane by its stable id, copy its selection or search its scrollback; manage windows; set font size and
   theme; reload or edit the keymap, event hooks and agterm-scoped ghostty config; run a custom command; read
-  a closed window's session screen; subscribe to status, notification, lifecycle, selection,
-  pane-visibility and tree-change events.
+  a closed window's session screen; report subagents; subscribe to status, notification,
+  lifecycle, selection, pane-visibility and tree-change events.
   Covers window/workspace/session addressing, AGTERM_* variables,
   attaching a session from another Mac, cookbook recipes, running version, diagnosing
   problems and filing a bug or feature request.
@@ -17,7 +17,7 @@ when_to_use: >
   Trigger on: agterm, agtermctl, AGTERM_SESSION_ID, and, from inside a session, plain requests such as
   split the pane, close the overlay, show a message over the session, show a question dialog, agtermctl ask,
   show an image inline, show this HTML page or artifact, make an HTML page or explainer for this and show
-  it, make a page that switches sessions or returns a choice, preview the report you generated, show this URL or the running dev server, keep me logged in to a page shown in an overlay, search the scrollback, run my custom command, tell me when the selected session changes, attach a session from another Mac, what recipes are there,
+  it, make a page that switches sessions or returns a choice, show my subagents under the session, preview the report you generated, show this URL or the running dev server, keep me logged in to a page shown in an overlay, search the scrollback, run my custom command, tell me when the selected session changes, attach a session from another Mac, what recipes are there,
   the keymap editor will not open.
 allowed-tools: Bash(agtermctl *)
 ---
@@ -415,6 +415,11 @@ omitted when expanded).
   selection or focus (the focus-free counterpart to `notify`, which raises the badge). Idempotent — a
   no-op when already zero. Read the current count from the tree node's `unseen` field. Use it so an
   orchestrator can acknowledge a driven session's notifications without pulling focus to it.
+- `session subagent <start|update|stop|remove|open> <ID> | <finish|clear> | end [CONV] | conversation <CONV>
+  [--type T] [--description D] [--activity A] [--status S] [--transcript PATH] [--conversation CONV]` — report subagents as child rows under the session (the
+  bundled Claude Code hooks already do), and `subagents [on|off|toggle]` reads or sets the Show subagents
+  setting they need. Off, writes succeed and record nothing. Read back the node's `subagents` and the
+  top-level `subagentRows`; see reference.md for the row rules.
 - `session restore ("cmd" | --none | --clear) [--pane left|right] [--pane-id TOKEN]` — pin what a pane re-runs on
   the NEXT launch, overriding the captured foreground command. A `"cmd"` shell line pins it, `--none` pins
   nothing (a plain shell), `--clear` drops the override back to auto-capture. Written now, consumed on the

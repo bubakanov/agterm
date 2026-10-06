@@ -3470,10 +3470,34 @@ for (const ws of tree.workspaces) for (const s of ws.sessions) {
               hooks package: a generic bash/zsh/fish shell integration (flags
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">active</span> while a command
               matching <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">AGTERM_AGENT_RE</span> runs;
-              the default set is gemini, cursor-agent, aider, crush, goose), four Claude Code hooks (prompt → active,
-              tool run → active, Stop → completed, permission prompt → blocked), and an OpenCode lifecycle plugin.
+              the default set is gemini, cursor-agent, aider, crush, goose), Claude Code hooks (prompt → active,
+              tool run → active, Stop → completed, permission prompt → blocked, plus the subagent events below), and an
+              OpenCode lifecycle plugin.
               When Claude Code runs as a worker under another agent with a shell process still between them, as in a
               tool call, its hooks stay silent, so the status of the pane that spawned it is not overwritten.
+            </p>
+            <p style="font-size: 15px; line-height: 1.65; color: #949ba4; margin: 16px 0 0" id="subagents">
+              <strong style="color: #e6e1d7">Subagents.</strong> With <strong style="color: #e6e1d7">Settings ▸ Agent Status ▸
+              Show subagents</strong> on, the subagents an agent starts appear as rows under its session: expand the session
+              with its disclosure triangle. Each row shows what the subagent was asked to do, what it is running now, and
+              its own status glyph. Click a row to read its transcript over the session, which follows new output while the subagent runs; click another subagent to
+              switch to it, or the session's own row to go back to the chat (⌘W and
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">q</span> close it too). Right-click a row for
+              <strong style="color: #e6e1d7">Copy Transcript</strong>, which copies it as plain text, or
+              <strong style="color: #e6e1d7">Mention in Chat</strong>, which types <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">@</span> and the
+              transcript's path at the parent agent's prompt, unsent, so you can ask a follow-up about it. Rows follow the conversation:
+              in Claude Code, after <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">/clear</span> the session shows the new conversation's subagents, and resuming
+              (<span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">--resume</span> or
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">--continue</span>) shows all of a
+              conversation's subagents, including ones that ran before agterm was watching. Codex reports a resumed conversation only with
+              your first message in it, so its subagents show from then on. Rows show while their conversation
+              runs: after the agent exits, or when agterm restarts, they hide until the conversation is resumed. They
+              belong to their session, saved with it and deleted with it. A
+              finished row disappears once its transcript file is deleted, and a session keeps its 50 newest. While a
+              subagent is still running, the session shows <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">active</span> rather than
+              <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">completed</span>. The Claude Code and Codex hooks report subagents; an install from before this feature needs
+              <strong style="color: #e6e1d7">Help ▸ Install Agent Status Hooks…</strong> once more. Other agents and scripts
+              report them with <a href="commands#session" style="color: #6d82f3"><span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">agtermctl session subagent</span></a>.
             </p>
             <p style="font-size: 15px; line-height: 1.65; color: #949ba4; margin: 16px 0 0">
               The scripts go to
@@ -3486,9 +3510,9 @@ for (const ws of tree.workspaces) for (const s of ws.sessions) {
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">~/.bashrc</span>, and
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">~/.config/fish/config.fish</span>
               (fish only when that directory already exists); open a new terminal for it to take effect. The per-agent hooks are
-              merged into each agent's own config: four Claude Code hooks into
+              merged into each agent's own config: eight Claude Code hooks into
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">~/.claude/settings.json</span> and
-              six Codex lifecycle hooks into
+              the Codex lifecycle and subagent hooks into
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">~/.codex/config.toml</span>. Before it
               changes either of those, the installer copies it beside the original with a
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">.bak</span> suffix, so the previous
@@ -3651,7 +3675,37 @@ command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' permi
 [[hooks.Stop]]
 [[hooks.Stop.hooks]]
 type = "command"
-command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' stop"</div>
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' stop"
+
+[[hooks.SubagentStart]]
+[[hooks.SubagentStart.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-start"
+
+[[hooks.SubagentStop]]
+[[hooks.SubagentStop.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-stop"
+
+[[hooks.PreToolUse]]
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-activity"
+
+[[hooks.SessionEnd]]
+[[hooks.SessionEnd.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-end"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-finish"
+
+[[hooks.SessionStart]]
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "'/Users/you/.config/agterm/agent-status/agterm-codex-status.sh' subagent-conversation"</div>
             <p style="font-size: 15px; line-height: 1.65; color: #949ba4; margin: 14px 0 0">
               The adapter script itself is already in place — the installer copies it to
               <span style="font-family: &quot;JetBrains Mono&quot;, monospace; color: #cbc6bc">~/.config/agterm/agent-status/</span>

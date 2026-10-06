@@ -27,7 +27,8 @@ paths:
 - Default-on nil fields are `notificationsEnabled`, `notificationBadgeEnabled`, `rightClickPaste`, and
   `workspaceRowClickExpands`, whose mirror gates the sidebar row-click toggle only ([[sidebar]]).
   Default-off nil fields include attention button, Dock bounce, global config inheritance, close
-  confirmation, auto-follow, hidden inactive sidebars, and interface hiding. `restoreMode` defaults to
+  confirmation, auto-follow, hidden inactive sidebars, interface hiding, and `showSubagents` (mirrored to
+  `GhosttyApp`; the control catalog carries it as `subagents`). `restoreMode` defaults to
   `none`; the legacy `restoreRunningCommand` boolean migrates to `rerun` or `none`.
 - `newSessionPlacement` (nil = `end`) applies only to New Session: `AppActions.newSession()` and the
   workspace row's New Session and "+", through `AppActions.resolvedNewSessionIndex`. It inserts after the
@@ -100,7 +101,7 @@ paths:
   Multiple Windows and the quick terminal's panel size, which sits there rather than under Appearance's
   Window because the panel belongs to no window.
   Notifications holds banner/badge/attention/bounce/sound. Agent Status holds colors/shapes, sound,
-  status reset, auto-follow, and Reset. Key Mapping holds config directory, diagnostics, and Reload.
+  status reset, auto-follow, Show subagents, and Reset. Key Mapping holds config directory, diagnostics, and Reload.
 - `statusReset` stores a raw `StatusReset` (`firstKey`|`enter`|`never`), nil for the default `firstKey`,
   resolved by `effectiveStatusReset` and mirrored to `GhosttyApp.statusReset`, which the surface factories'
   keystroke-clear closure reads at keystroke time. Reset to defaults clears it with the glyph settings.

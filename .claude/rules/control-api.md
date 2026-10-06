@@ -157,12 +157,12 @@ renumbering. Do not reintroduce a count anywhere.
 - `session.new`, `.duplicate`, `.close`, `.select`, `.rename`, `.reveal`, `.move`, `.type`, `.split`,
   `.split.close`, `.swap`, `.lead`,
   `.scratch`, `.focus`, `.resize`, `.go`, `.copy`, `.paste`, `.selectall`, `.text`, `.search`, `.status`,
-  `.flag`, `.seen`, `.restore`, `.restart`, `.background`, `.overlay.open`, `.overlay.close`, `.overlay.resize`,
+  `.flag`, `.seen`, `.restore`, `.restart`, `.subagent`, `.background`, `.overlay.open`, `.overlay.close`, `.overlay.resize`,
   `.overlay.reload`, `.overlay.navigate`,
   `.overlay.result`, `.overlay.submit`, `.overlay.copy`, `.overlay.text`, `.overlay.job.run`, `.hud.open`, `.hud.update`,
   `.hud.close`
 - `surface.zoom`, `surface.cursor`, `dashboard`, `pick.open`, `pick.result`, `pick.cancel`,
-  `ask.open`, `ask.result`, `ask.cancel`
+  `ask.open`, `ask.result`, `ask.cancel`, `subagents`
 - `quick`, `quick.type`, `quick.text`
 - `sidebar`, `sidebar.mode`, `sidebar.flagged-layout`, `sidebar.expand`, `sidebar.collapse`, `sidebar.width`,
   `notify`
@@ -1000,8 +1000,49 @@ side, and reads `lastAppliedIsDark` when bare. Refuse it outside XCUITest; provi
   `context` is the shown value: an attached row also shows its origin's context, and the Remote sessions
   section owns that rule.
 
-## Keymap, config, theme, and sidebar
+## Subagent rows
 
+- `session.subagent` keeps `SubagentHistory` on `Session`, persisted in `SessionSnapshot.subagents` and
+  carried by Recent Closed through the snapshot. The store (`AppStore+Subagents`) owns every rule: the
+  50-row cap and `droppedCount`, pruning (at restore, reopen, expand and open) finished rows whose
+  transcript was seen and is now gone, and finishing running rows on restore because no agent survives to
+  finish them. `Subagent.transcriptSeen` exists because Claude names transcripts it may never write: a
+  session can leave only `.meta.json` files, and dropping on absence alone deleted live rows in testing.
+- Rows carry `conversationID` and the history `currentConversation`; `visibleEntries` (the current
+  conversation's rows plus untagged ones) is what the sidebar shows and what `tree.changed` follows. A
+  `start` switches the current conversation, and Claude's `SessionStart` does so through `conversation`,
+  so `/clear` hides the old rows and `--resume`/`--continue` (same conversation id, source `resume`) brings
+  them back. The same hook then reports, detached, every `subagents/agent-*.meta.json` in the conversation's
+  folder as a finished row, so subagents that ran before this agterm heard them still show; a known id is
+  only refreshed. The tree still lists every row.
+  `currentConversation` is ephemeral and `end` (`endConversation`) clears it; `finish` only completes running
+  rows, which Codex's `Stop` sends because Codex leaves idle subagent threads open past the turn and never
+  sends their `SubagentStop`. `end` carries the ending `session_id`: Codex ends the blank session it started
+  with only after `/resume` moved the pane on, so an unnamed end hid the live conversation mid-run. Codex
+  also sends a resume's `SessionStart` with the first prompt, not at `/resume`. Rows show only beside a running
+  conversation: restored rows wait for the next `SessionStart`. Live sessions lose them across a relaunch
+  until the running agent's next subagent `start` or resume.
+- `open` runs `agterm-transcript-view.sh` (JXA render piped to `less`) as a session-wide program overlay, so
+  Claude's format stays in the hook package. A running row opens with `--follow`: a background loop renders
+  only newly completed JSONL lines into a temp file that `less +F` follows, so a record still being written
+  waits for the next pass. `AppActions.closeSubagentTranscript` closes only an overlay
+  whose command names that viewer; `open` calls it first, so picking another row replaces the view.
+- A parent `completed` arriving through `applyControlStatus` while a row runs is shown as `active`, kept
+  as `deferredParentStatus` (never persisted) and applied when the last row ends. Any other parent status
+  drops it. Background subagents outlive the parent's turn, so the hook's `Stop` alone would lie.
+- Show subagents gates recording in the app action, not the store: `start`/`update` (`SubagentChange.records`)
+  answer ok with `subagentsOffNote` and change nothing, so a hook never fails on it; tidying writes always run.
+  `subagents` mirrors `sidebar.flagged-layout`: app-wide, written through `SettingsModel`, echoed in
+  `result.text`, read back as top-level `subagentRows`.
+- Claude and Codex report through one shared `agterm-subagent-hook.sh AGENT MODE`: their subagent payloads
+  match (`agent_id`, `agent_type`, `session_id`, `transcript_path`, `agent_transcript_path`; measured on
+  Claude Code 2.1.289 and Codex 0.160.1), so AGENT only picks where the transcript and description live.
+  Claude's adapter runs its worker guard first and pipes the payload on; Codex's dispatches `subagent-*`
+  actions straight to it. Codex names the subagent's own rollout at start and the parent's later, and keeps
+  the task (`agent_path`) and nickname in the rollout's first record. Only Claude imports history on
+  resume so far. The handler calls the generic wrapper's `subagent` verb, the one place that resolves
+  `agtermctl` and the socket. `PreToolUse` fires for the parent too; a missing `agent_id` exits early.
+  The payload fields are undocumented internals of both agents.
 - `keymap.run` starts a custom command by exact name against the addressed session, through the
   palette's `CustomCommandRunner.run` with that session in place of the active one. The parser keeps one
   command per name, so a name is the address; `CustomCommand.id` is minted per parse and never one.

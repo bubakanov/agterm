@@ -117,6 +117,25 @@ paths:
   the same `cloud` beside the host, gated by `InterfaceElement.remoteHost`.
   See [[control-api]].
 
+## Subagent rows
+
+- A session with subagent rows (Show subagents on) is expandable; its children are `.subagent` nodes keyed
+  by an MD5-derived UUID of session id plus agent id, so `nodeCache`, `lastRowContent` and in-place relabel
+  serve them unchanged. `TreeShape.subagentRowIDs` makes a start or removal rebuild; a status or activity
+  change reloads one row. Session expansion is `expandedSessionIDs`, view state only, collapsed by default.
+- Subagent rows are never selected, dragged, renamed, flagged or navigated to. A click selects the owner and
+  opens the transcript through `AppActions.openSubagentTranscript`, the path `session.subagent open` shares.
+  A drop on or between them targets the owning session row. The clicked row carries the selection pill
+  (`highlightedSubagentRowID`) only while its session stays selected AND shows that transcript, so any way
+  of closing the viewer (⌘W, the pager's q) hands the selection back; the observed tuple reads
+  `overlayActive` for that. It is set only after the async open succeeds, or the first sync would drop it.
+  Collapsing the session closes the transcript and selects the session row, which AppKit would otherwise
+  leave with no selection at all. A session-row pick also closes the transcript viewer on the session left and the one picked
+  (`closeSubagentTranscripts`), and opening a subagent of another session closes the previous one's, so no
+  one has to learn the pager's quit key. The row menu has Open Transcript, Copy Transcript (the viewer's
+  text, SGR stripped; pasteboard-only, so no control command) and Mention in Chat (closes the viewer and
+  types `@<path> `, unsent, into the session's focused pane). There is no Remove: resume re-imports rows.
+
 ## Workspace focus
 
 - Focus state is `focusedWorkspaceIDs: Set<UUID>` plus `focusEnabled`; turning the filter off preserves
