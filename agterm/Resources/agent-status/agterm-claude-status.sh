@@ -16,14 +16,28 @@
 #
 # It fails OPEN (reports) whenever the chain is unreadable or severed, e.g. a detached worker whose
 # spawner already exited: a missed guard is the behavior without this adapter, while a false silence
-# is a bug with no symptom. The argv is forwarded to the shared wrapper verbatim, so the adapter adds
-# a guard and changes nothing else; it never reads stdin, so a payload another hook wants is intact.
+# is a bug with no symptom. A status argv is forwarded to the shared wrapper verbatim, so the adapter
+# adds a guard and changes nothing else. Only the subagent-* modes read stdin; each hook gets its own.
 set -u
 
 [ -n "${AGTERM_SESSION_ID:-}" ] || exit 0
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 status_wrapper=${AGTERM_STATUS_WRAPPER:-"$script_dir/agterm-agent-status.sh"}
+
+# The subagent-* modes read the hook payload, the only place Claude names a subagent; every other mode
+# leaves stdin alone. plutil reads JSON on every supported macOS, where jq is not guaranteed.
+mode=${1:-}
+payload=
+field() { plutil -extract "$1" raw -o - - <<<"$payload" 2>/dev/null; }
+case "$mode" in
+  subagent-*)
+    payload=$(cat)
+    agent=$(field agent_id)
+    # PreToolUse fires for the parent's tools too, which carry no agent id: leave before the process walk
+    case "$mode" in subagent-finish | subagent-end | subagent-conversation) ;; *) [ -n "$agent" ] || exit 0 ;; esac
+    ;;
+esac
 
 # exact names, not a glob: `claude*` also matches wrapper scripts such as claude-opus-worker.
 # The list is the union of the hook-driven agents and shell/integration.sh's AGTERM_AGENT_RE
@@ -81,4 +95,11 @@ for _ in 1 2 3 4 5 6 7 8; do
   p=$ppid
 done
 
+case "$mode" in
+  # the subagent logic is shared with the Codex adapter; this adapter only owns the worker guard above
+  subagent-*)
+    printf '%s' "$payload" | "$script_dir/agterm-subagent-hook.sh" claude "${mode#subagent-}"
+    exit 0
+    ;;
+esac
 exec "$status_wrapper" "$@"

@@ -16,6 +16,11 @@ shift
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd)
 status_wrapper=${AGTERM_STATUS_WRAPPER:-"$script_dir/agterm-agent-status.sh"}
 
+# subagent rows share one handler with the Claude adapter; the payload on stdin passes straight through
+case "$action" in
+  subagent-*) exec "$script_dir/agterm-subagent-hook.sh" codex "${action#subagent-}" ;;
+esac
+
 pane_args=()
 [ -n "${AGTERM_PANE_ID:-}" ] && pane_args+=(--pane-id "$AGTERM_PANE_ID")
 [ -n "${AGTERM_PANE:-}" ] && pane_args+=(--pane "$AGTERM_PANE")

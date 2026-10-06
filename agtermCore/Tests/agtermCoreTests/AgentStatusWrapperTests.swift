@@ -64,6 +64,15 @@ struct AgentStatusWrapperTests {
         #expect(r.exit == 0)
     }
 
+    @Test func subagentVerbForwardsToSessionSubagentWithoutPane() throws {
+        let r = try runWrapper(["subagent", "start", "a1", "--type", "Explore"],
+                               env: ["AGTERM_SESSION_ID": "sid", "AGTERM_SOCKET": "/tmp/s.sock", "AGTERM_PANE": "right"])
+        #expect(r.argv == ["session", "subagent", "start", "a1", "--type", "Explore",
+                           "--target", "sid", "--socket", "/tmp/s.sock"])
+        #expect(r.stdout.isEmpty)
+        #expect(r.exit == 0)
+    }
+
     @Test func extraArgsForwardedAfterTargetAndSocket() throws {
         let r = try runWrapper(["blocked", "--blink"], env: ["AGTERM_SESSION_ID": "sid", "AGTERM_SOCKET": "/tmp/s.sock"])
         #expect(r.argv == ["session", "status", "blocked", "--target", "sid", "--socket", "/tmp/s.sock", "--blink"])

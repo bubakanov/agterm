@@ -72,8 +72,9 @@ struct AgentHooksInstallTests {
         let root = object(result.json)
         #expect(root["model"] as? String == "opus")
         let evts = events(result.json)
-        #expect(evts["PreToolUse"]?.count == 1)
+        #expect(evts["PreToolUse"]?.count == 2)
         #expect(command(evts["PreToolUse"]![0]) == "/usr/bin/guard.sh")
+        #expect(command(evts["PreToolUse"]![1])?.hasSuffix("claude-status.sh' subagent-activity") == true)
         #expect(evts["UserPromptSubmit"]?.count == 2)
         let commands = evts["UserPromptSubmit"]!.compactMap { command($0) }
         #expect(commands.contains("/usr/bin/other-hook.sh"))
@@ -81,6 +82,9 @@ struct AgentHooksInstallTests {
         #expect(evts["PostToolUse"]?.count == 1)
         #expect(evts["Stop"]?.count == 1)
         #expect(evts["Notification"]?.count == 1)
+        #expect(evts["SubagentStart"]?.count == 1)
+        #expect(evts["SubagentStop"]?.count == 1)
+        #expect(evts["SessionEnd"]?.count == 1)
     }
 
     @Test func mergeRemergePreservesUnrelatedAndStaysNoOp() throws {
@@ -257,13 +261,13 @@ struct AgentHooksInstallTests {
         // a whitespace-only file has no content to lose, so it starts fresh like an empty file
         let result = try AgentHooksInstall.mergeClaudeSettings(existing: "   \n\t\n", scriptDir: scriptDir)
         #expect(result.changed)
-        #expect(events(result.json).count == 4)
+        #expect(events(result.json).count == 9)
     }
 
     @Test func mergeHandlesEmptyExisting() throws {
         let result = try AgentHooksInstall.mergeClaudeSettings(existing: "", scriptDir: scriptDir)
         #expect(result.changed)
-        #expect(events(result.json).count == 4)
+        #expect(events(result.json).count == 9)
     }
 
     @Test func codexHooksBlockContainsAllSixEvents() {
@@ -273,6 +277,14 @@ struct AgentHooksInstallTests {
             #expect(block.contains("[[hooks.\(event).hooks]]"))
         }
         #expect(block.contains("type = \"command\""))
+    }
+
+    @Test func codexHooksBlockWithRepeatedEventsParsesAsTOML() {
+        let block = AgentHooksInstall.codexHooksBlock(scriptDir: scriptDir)
+        #expect(block.components(separatedBy: "[[hooks.PreToolUse]]").count == 3)
+        #expect(block.contains("[[hooks.SubagentStart]]"))
+        // the merge parses an unmarked file before deciding; an unreadable block would answer .unparseable
+        #expect(AgentHooksInstall.mergeCodexConfig(existing: block, scriptDir: scriptDir) == .hooksExist)
     }
 
     @Test func codexHooksBlockMapsActionsAndBakesWrapperPath() {

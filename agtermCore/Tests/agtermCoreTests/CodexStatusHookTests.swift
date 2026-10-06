@@ -272,4 +272,54 @@ struct CodexStatusHookTests {
         let result = try run("", screens: [prompt], worker: true, supersedeTokenOnRead: true)
         #expect(result.statusCalls.isEmpty)
     }
+
+    // MARK: - subagent actions
+
+    private func rollout(nickname: String, task: String) throws -> URL {
+        let file = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("rollout-\(UUID().uuidString).jsonl")
+        try #"{"type":"session_meta","payload":{"parent_thread_id":"conv","agent_nickname":"\#(nickname)","agent_path":"\#(task)"}}"#
+            .write(to: file, atomically: true, encoding: .utf8)
+        return file
+    }
+
+    @Test func subagentStartNamesTheRolloutAndItsTask() throws {
+        let file = try rollout(nickname: "Nietzsche", task: "/root/swift_files")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let input = #"{"agent_id":"a1","agent_type":"default","session_id":"conv","transcript_path":"\#(file.path)"}"#
+
+        #expect(try run("subagent-start", input: input).statusCalls == [
+            "subagent start a1 --description swift_files (Nietzsche) --type default --transcript \(file.path) --conversation conv",
+        ])
+    }
+
+    @Test func subagentStopTakesTheReportedTranscriptNotTheParents() throws {
+        let file = try rollout(nickname: "Parfit", task: "/root/readme_lines")
+        defer { try? FileManager.default.removeItem(at: file) }
+        let input = #"{"agent_id":"a2","agent_type":"default","session_id":"conv","transcript_path":"/parent.jsonl","agent_transcript_path":"\#(file.path)"}"#
+
+        #expect(try run("subagent-stop", input: input).statusCalls == [
+            "subagent stop a2 --description readme_lines (Parfit) --type default --transcript \(file.path)",
+        ])
+    }
+
+    @Test func subagentActivityReportsTheCommandAndTheParentsOwnToolsNothing() throws {
+        let subagent = #"{"agent_id":"a1","tool_name":"Bash","tool_input":{"command":"echo alpha"}}"#
+        let parent = #"{"tool_name":"collaborationspawn_agent","tool_input":{}}"#
+
+        #expect(try run("subagent-activity", input: subagent).statusCalls == [
+            "subagent update a1 --status active --activity Bash: echo alpha",
+        ])
+        #expect(try run("subagent-activity", input: parent).statusCalls.isEmpty)
+    }
+
+    @Test func sessionStartTurnEndAndExitDriveTheConversation() throws {
+        #expect(try run("subagent-conversation", input: #"{"session_id":"conv","source":"startup"}"#).statusCalls
+            == ["subagent conversation conv"])
+        // Codex leaves idle subagent threads open, so a finished turn completes their rows
+        #expect(try run("subagent-finish", input: #"{"stop_hook_active":false}"#).statusCalls == ["subagent finish"])
+        #expect(try run("subagent-end", input: #"{"reason":"other"}"#).statusCalls == ["subagent end"])
+        // the session that ended is named, so a late end of another one cannot hide the current conversation
+        #expect(try run("subagent-end", input: #"{"session_id":"blank","reason":"other"}"#).statusCalls
+            == ["subagent end blank"])
+    }
 }

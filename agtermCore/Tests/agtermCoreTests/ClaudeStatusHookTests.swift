@@ -23,7 +23,7 @@ struct ClaudeStatusHookTests {
     // session — the very thing this adapter exists for — would put a real `claude` above the fixture and turn
     // the owner cases silent. The boundary makes each case depend only on the processes it builds.
     private func run(chain: [String], args: [String], sessionID: String? = "sid",
-                     extraEnv: [String: String] = [:]) throws -> (calls: [String], exit: Int32) {
+                     extraEnv: [String: String] = [:], stdin: String? = nil) throws -> (calls: [String], exit: Int32) {
         let fm = FileManager.default
         let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("agterm-claude-hook-\(UUID().uuidString)")
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -75,7 +75,11 @@ struct ClaudeStatusHookTests {
         proc.environment = environment
         proc.standardOutput = Pipe()
         proc.standardError = Pipe()
+        let input = Pipe()
+        proc.standardInput = input
         try proc.run()
+        input.fileHandleForWriting.write(Data((stdin ?? "").utf8))
+        try input.fileHandleForWriting.close()
         proc.waitUntilExit()
 
         let recorded = ((try? String(contentsOf: calls, encoding: .utf8)) ?? "")
@@ -209,5 +213,102 @@ struct ClaudeStatusHookTests {
         let result = try run(chain: ["login", "claude"], args: ["completed", "--auto-reset"], sessionID: nil)
         #expect(result.calls.isEmpty)
         #expect(result.exit == 0)
+    }
+
+    // MARK: - subagent modes
+
+    private func payload(_ fields: [String: Any]) throws -> String {
+        String(decoding: try JSONSerialization.data(withJSONObject: fields), as: UTF8.self)
+    }
+
+    @Test func subagentStartDerivesTheTranscriptAndReadsTheDescription() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("agterm-subagent-\(UUID().uuidString)")
+        let subagents = dir.appendingPathComponent("sess/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try #"{"description":"probe child","agentType":"general-purpose"}"#
+            .write(to: subagents.appendingPathComponent("agent-a1.meta.json"), atomically: true, encoding: .utf8)
+        let body = try payload(["agent_id": "a1", "agent_type": "general-purpose", "session_id": "sess",
+                                "transcript_path": dir.appendingPathComponent("sess.jsonl").path])
+
+        let result = try run(chain: ["login", "claude"], args: ["subagent-start"], stdin: body)
+
+        let transcript = subagents.appendingPathComponent("agent-a1.jsonl").path
+        #expect(result.calls == ["subagent start a1 --description probe child --type general-purpose --transcript \(transcript) --conversation sess"])
+    }
+
+    @Test func subagentStopPrefersTheReportedTranscript() throws {
+        let body = try payload(["agent_id": "a1", "agent_type": "Explore", "session_id": "sess",
+                                "transcript_path": "/p/sess.jsonl", "agent_transcript_path": "/p/sess/subagents/agent-a1.jsonl"])
+        let result = try run(chain: ["login", "claude"], args: ["subagent-stop"], stdin: body)
+        #expect(result.calls == ["subagent stop a1 --type Explore --transcript /p/sess/subagents/agent-a1.jsonl"])
+    }
+
+    @Test func subagentActivityReportsTheToolAndItsSubject() throws {
+        let body = try payload(["agent_id": "a1", "tool_name": "Bash", "tool_input": ["command": "npm test"]])
+        let result = try run(chain: ["login", "claude"], args: ["subagent-activity"], stdin: body)
+        #expect(result.calls == ["subagent update a1 --status active --activity Bash: npm test"])
+    }
+
+    @Test func subagentActivityFillsInADescriptionWrittenAfterTheStart() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("agterm-subagent-\(UUID().uuidString)")
+        let subagents = dir.appendingPathComponent("sess/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try #"{"description":"late description"}"#
+            .write(to: subagents.appendingPathComponent("agent-a1.meta.json"), atomically: true, encoding: .utf8)
+        let body = try payload(["agent_id": "a1", "session_id": "sess", "transcript_path": dir.appendingPathComponent("sess.jsonl").path,
+                                "tool_name": "Read", "tool_input": ["file_path": "/x"]])
+
+        let result = try run(chain: ["login", "claude"], args: ["subagent-activity"], stdin: body)
+
+        #expect(result.calls == ["subagent update a1 --status active --activity Read: /x --description late description"])
+    }
+
+    @Test func theParentsOwnToolCallReportsNothing() throws {
+        let body = try payload(["tool_name": "Bash", "tool_input": ["command": "ls"]])
+        let result = try run(chain: ["login", "claude"], args: ["subagent-activity"], stdin: body)
+        #expect(result.calls.isEmpty)
+        #expect(result.exit == 0)
+    }
+
+    @Test func sessionEndEndsTheConversation() throws {
+        let result = try run(chain: ["login", "claude"], args: ["subagent-end"], stdin: try payload(["reason": "other"]))
+        #expect(result.calls == ["subagent end"])
+    }
+
+    @Test func aSpawnedWorkersSubagentsStaySilent() throws {
+        let body = try payload(["agent_id": "a1", "agent_type": "general-purpose"])
+        let result = try run(chain: ["login", "claude", "zsh", "claude"], args: ["subagent-start"], stdin: body)
+        #expect(result.calls.isEmpty)
+    }
+
+    @Test func sessionStartSwitchesTheShownConversation() throws {
+        let result = try run(chain: ["login", "claude"], args: ["subagent-conversation"],
+                             stdin: try payload(["session_id": "c2", "source": "clear"]))
+        #expect(result.calls == ["subagent conversation c2"])
+    }
+
+    @Test func aResumedConversationImportsItsEarlierSubagents() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("agterm-subagent-\(UUID().uuidString)")
+        let subagents = dir.appendingPathComponent("conv/subagents")
+        try FileManager.default.createDirectory(at: subagents, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try #"{"description":"first","agentType":"Explore"}"#
+            .write(to: subagents.appendingPathComponent("agent-a1.meta.json"), atomically: true, encoding: .utf8)
+        try #"{"agentType":"general-purpose"}"#
+            .write(to: subagents.appendingPathComponent("agent-a2.meta.json"), atomically: true, encoding: .utf8)
+        let body = try payload(["session_id": "conv", "source": "resume",
+                                "transcript_path": dir.appendingPathComponent("conv.jsonl").path])
+
+        let result = try run(chain: ["login", "claude"], args: ["subagent-conversation"],
+                             extraEnv: ["AGTERM_HOOK_FOREGROUND": "1"], stdin: body)
+
+        let base = subagents.path
+        #expect(result.calls == [
+            "subagent conversation conv",
+            "subagent start a1 --status completed --conversation conv --transcript \(base)/agent-a1.jsonl --description first --type Explore",
+            "subagent start a2 --status completed --conversation conv --transcript \(base)/agent-a2.jsonl --type general-purpose",
+        ])
     }
 }

@@ -13,7 +13,7 @@ public enum AgentHooksInstall {
     /// terminal-output knowledge stays in this hook resource, outside agterm's runtime.
     public static let codexWrapperName = "agterm-codex-status.sh"
 
-    /// Claude-specific adapter the four Claude hooks invoke instead of the generic wrapper: a worker agent
+    /// Claude-specific adapter the Claude hooks invoke instead of the generic wrapper: a worker agent
     /// spawned from inside a session inherits the spawner's `AGTERM_*` environment, so its hooks would repaint
     /// the SPAWNER's row. The adapter answers that ownership question from process topology and delegates,
     /// keeping the Claude-specific knowledge in the hook resource the way the Codex adapter does.
@@ -115,11 +115,17 @@ public enum AgentHooksInstall {
     /// "permission answered" event, and the gated tool's `PreToolUse` fired BEFORE `blocked` was set, so its
     /// `PostToolUse` is the first hook afterwards. `Notification` alone carries the `permission_prompt` matcher,
     /// and only `Stop`→`completed` passes `--auto-reset` (it clears on visit); the rest stay keep-state.
+    /// The `subagent-*` entries are adapter modes, not states: they report subagent rows from the payload.
     static let claudeHooks: [(event: String, matcher: String?, state: String)] = [
         ("UserPromptSubmit", nil, "active --blink"),
         ("PostToolUse", nil, "active --blink"),
         ("Stop", nil, "completed --auto-reset"),
         ("Notification", "permission_prompt", "blocked"),
+        ("SubagentStart", nil, "subagent-start"),
+        ("SubagentStop", nil, "subagent-stop"),
+        ("PreToolUse", nil, "subagent-activity"),
+        ("SessionEnd", nil, "subagent-end"),
+        ("SessionStart", nil, "subagent-conversation"),
     ]
 
     /// Codex lifecycle events paired with actions the installed Codex hook understands; the adapter, not
@@ -131,6 +137,13 @@ public enum AgentHooksInstall {
         ("PostToolUse", "post-tool-use"),
         ("PermissionRequest", "permission-request"),
         ("Stop", "stop"),
+        ("SubagentStart", "subagent-start"),
+        ("SubagentStop", "subagent-stop"),
+        ("PreToolUse", "subagent-activity"),
+        ("SessionEnd", "subagent-end"),
+        // Codex leaves an idle subagent thread open past the turn, so the turn's end completes its rows
+        ("Stop", "subagent-finish"),
+        ("SessionStart", "subagent-conversation"),
     ]
 
     /// The destination directory for Pi's auto-discovered global extensions.
@@ -164,7 +177,7 @@ public enum AgentHooksInstall {
     /// object: the installer refuses to overwrite a hand-maintained file it cannot safely parse.
     public enum MergeError: Error { case malformedExistingSettings }
 
-    /// merge the four agent-status hooks into an existing Claude Code `settings.json`.
+    /// merge the agent-status hooks into an existing Claude Code `settings.json`.
     ///
     /// `existing` is the current contents (nil/empty = start from a fresh object). Returns the new JSON and
     /// whether it differs; idempotent — hooks already present (detected by the adapter command) return the

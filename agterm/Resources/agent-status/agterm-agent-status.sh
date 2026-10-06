@@ -32,6 +32,18 @@ set -u
 state=$1
 shift
 
+# `subagent ACTION [ID] [flags]` reports a subagent row under this session instead of its status glyph,
+# forwarding to `agtermctl session subagent`. Rows carry no pane, so no pane discriminator rides along.
+if [ "$state" = subagent ]; then
+  if [ -n "${AGTERM_SOCKET:-}" ]; then
+    "${AGTERMCTL:-agtermctl}" session subagent "$@" \
+      --target "$AGTERM_SESSION_ID" --socket "$AGTERM_SOCKET" >/dev/null 2>&1 || true
+  else
+    "${AGTERMCTL:-agtermctl}" session subagent "$@" --target "$AGTERM_SESSION_ID" >/dev/null 2>&1 || true
+  fi
+  exit 0
+fi
+
 # forward the pane discriminators when the app injected them: each session surface
 # (main/split/scratch) sets its own AGTERM_PANE (the role) plus AGTERM_PANE_ID (a stable
 # per-surface token). the role can go stale — a split survivor promoted into the main pane
