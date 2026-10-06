@@ -297,6 +297,9 @@ when the server started outside agterm or that session has closed. Diagnose: run
 agterm has no automatic mapping from the hook payload's Codex session id to the pane displaying it.
 Fix: run `codex --no-daemon`, which keeps the session and its hooks in its own process; that running
 session is unavailable for control through the shared server from the Codex desktop or mobile app.
+For that default, run `codex features disable daemon_auto_start`, then `codex app-server daemon stop`,
+which also releases a conversation the server holds open for `/resume`; a server the Codex desktop app
+or `codex agents` starts is still joined.
 
 ### "Claude Code's question/permission prompt is unresponsive after switching apps"
 
