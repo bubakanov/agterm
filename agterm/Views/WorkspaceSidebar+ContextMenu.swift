@@ -14,6 +14,10 @@ extension WorkspaceSidebar.Coordinator {
     /// `workspaceRowClickExpands` gates the whole-row target only; the disclosure triangle keeps toggling.
     @objc func handleSingleClick(_ sender: NSOutlineView) {
         let row = sender.clickedRow
+        if row >= 0, let node = sender.item(atRow: row) as? SidebarNode, node.kind == .subagent {
+            openSubagent(node)
+            return
+        }
         guard row >= 0, let node = sender.item(atRow: row) as? SidebarNode, node.kind == .workspace,
               GhosttyApp.shared.workspaceRowClickExpands else { return }
         if let event = NSApp.currentEvent {
@@ -43,7 +47,7 @@ extension WorkspaceSidebar.Coordinator {
         pendingRowToggle?.cancel()
         pendingRowToggle = nil
         let row = sender.clickedRow
-        guard row >= 0, let node = sender.item(atRow: row) as? SidebarNode else { return }
+        guard row >= 0, let node = sender.item(atRow: row) as? SidebarNode, node.kind != .subagent else { return }
         renameController.beginEditing(node: node)
     }
 
@@ -58,6 +62,7 @@ extension WorkspaceSidebar.Coordinator {
     /// Builds the per-row context menu, resolving the clicked row lazily so one menu serves every row.
     func menu(forRow row: Int) -> NSMenu? {
         guard let outline = outlineView, row >= 0, let node = outline.item(atRow: row) as? SidebarNode else { return nil }
+        if node.kind == .subagent { return subagentMenu(node) }
         let menu = NSMenu()
         // explicit enabled state (Delete is disabled at the last workspace), not responder-chain auto-enabling.
         menu.autoenablesItems = false
@@ -171,6 +176,8 @@ extension WorkspaceSidebar.Coordinator {
             delete.representedObject = node
             delete.isEnabled = store.canRemoveWorkspace
             menu.addItem(delete)
+        case .subagent:
+            break
         }
         return menu
     }
@@ -198,9 +205,10 @@ extension WorkspaceSidebar.Coordinator {
     /// pasteboard.
     @objc private func menuCopyName(_ sender: NSMenuItem) {
         guard let node = sender.representedObject as? SidebarNode else { return }
-        let name = switch node.kind {
+        let name: String? = switch node.kind {
         case .session: store.session(withID: node.id)?.displayName
         case .workspace: store.workspaceName(node.id)
+        case .subagent: nil
         }
         // a row gone between the right-click and the choice, or a blank workspace name: leave the
         // pasteboard as the user had it rather than clearing it to write nothing.

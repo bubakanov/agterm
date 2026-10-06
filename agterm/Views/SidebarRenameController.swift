@@ -114,6 +114,7 @@ final class SidebarRenameController: NSObject, NSTextFieldDelegate {
         switch node.kind {
         case .session: store.renameSession(node.id, to: newValue)
         case .workspace: store.renameWorkspace(node.id, to: newValue)
+        case .subagent: break
         }
     }
 

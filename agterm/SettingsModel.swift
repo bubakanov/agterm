@@ -75,6 +75,7 @@ final class SettingsModel {
         applyInterfaceElements()
         applyAutoHideSidebarInactiveWindows()
         applyFlaggedViewLayout()
+        applyShowSubagents()
         applyHtmlOverlayZoom()
         ensureStarterKeymap()
         loadKeymap()
@@ -260,6 +261,13 @@ final class SettingsModel {
     /// Persist the flagged view's layout; `flat` is the nil case, keeping `settings.json` minimal. Not a ghostty
     /// key: it rides `.agtermAppearanceChanged`, which every sidebar reconciles on. An unchanged value skips
     /// the write so no sidebar rebuilds for nothing.
+    /// Persist Show subagents (off is nil); rides `.agtermAppearanceChanged` like the flagged layout.
+    func setShowSubagents(_ value: Bool) {
+        guard value != (settings.showSubagents ?? false) else { return }
+        settings.showSubagents = value ? true : nil
+        persistAndApply()
+    }
+
     func setFlaggedViewLayout(_ layout: FlaggedViewLayout) {
         guard layout != settings.effectiveFlaggedViewLayout else { return }
         settings.flaggedViewLayout = layout == .flat ? nil : layout.rawValue
@@ -743,6 +751,7 @@ final class SettingsModel {
         applyInterfaceElements()
         applyAutoHideSidebarInactiveWindows()
         applyFlaggedViewLayout()
+        applyShowSubagents()
         // refresh the chrome (title bar + sidebar + quick terminal) for the new terminal color,
         // translucency and toolbar style now, not at the next window re-key.
         NotificationCenter.default.post(name: .agtermAppearanceChanged, object: nil)
@@ -791,6 +800,10 @@ final class SettingsModel {
 
     private func applyFlaggedViewLayout() {
         GhosttyApp.shared.setFlaggedViewLayout(settings.effectiveFlaggedViewLayout)
+    }
+
+    private func applyShowSubagents() {
+        GhosttyApp.shared.setShowSubagents(settings.showSubagents ?? false)
     }
 
     private func applyHtmlOverlayZoom() {

@@ -22,6 +22,8 @@ extension WorkspaceSidebar.Coordinator {
             pbItem.setString(draggedIDs.map(\.uuidString).joined(separator: "\n"), forType: sessionPasteboardType)
         case .workspace:
             pbItem.setString(node.id.uuidString, forType: workspacePasteboardType)
+        case .subagent:
+            return nil
         }
         return pbItem
     }
@@ -133,6 +135,11 @@ extension WorkspaceSidebar.Coordinator {
         case .session:
             guard let drop = store.sessionLocation(ofSession: node.id) else { return nil }
             target = .sessionRow(workspace: drop.workspace, sessionIndex: drop.index, sessionCount: drop.count)
+            // a gap among an expanded session's subagent rows is a drop on that session, not a slot inside it
+            if index != SidebarDrop.onItemIndex { return resolveSessionMove(from: info, item: item, childIndex: SidebarDrop.onItemIndex) }
+        case .subagent:
+            guard let owner = node.ownerSessionID.flatMap({ nodeCache[$0] }) else { return nil }
+            return resolveSessionMove(from: info, item: owner, childIndex: SidebarDrop.onItemIndex)
         }
 
         let sources = sessionIDs.compactMap { id -> SidebarDrop.SessionSource? in
@@ -169,6 +176,8 @@ extension WorkspaceSidebar.Coordinator {
             return node.id
         case .session:
             return store.workspace(forSession: node.id)?.id
+        case .subagent:
+            return node.ownerSessionID.flatMap { store.workspace(forSession: $0)?.id }
         }
     }
 

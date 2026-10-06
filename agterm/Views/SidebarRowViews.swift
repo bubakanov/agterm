@@ -290,15 +290,21 @@ final class SidebarRowView: NSTableRowView {
 /// identity (`===`) — nodes must be the SAME instances across reloads, never fresh structs. The coordinator
 /// caches one per workspace/session id and rebuilds only the child lists.
 final class SidebarNode {
-    enum Kind { case workspace, session }
+    enum Kind { case workspace, session, subagent }
 
     let kind: Kind
     let id: UUID
-    /// Workspace child nodes, repopulated from the store on each rebuild. Empty for session nodes.
+    /// A subagent row's session; nil for workspace and session rows.
+    let ownerSessionID: UUID?
+    /// A subagent row's agent id; nil on the truncation row, which stands for the rows the cap evicted.
+    let agentID: String?
+    /// Child nodes repopulated on each rebuild: a workspace's sessions, a session's subagent rows.
     var children: [SidebarNode] = []
 
-    init(kind: Kind, id: UUID) {
+    init(kind: Kind, id: UUID, ownerSessionID: UUID? = nil, agentID: String? = nil) {
         self.kind = kind
         self.id = id
+        self.ownerSessionID = ownerSessionID
+        self.agentID = agentID
     }
 }

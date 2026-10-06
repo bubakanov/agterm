@@ -92,6 +92,8 @@ final class GhosttyApp {
     /// How every window's flagged sidebar view arranges its sessions; the sidebar Coordinator reads it per
     /// rebuild and on `.agtermAppearanceChanged`.
     private(set) var flaggedViewLayout: FlaggedViewLayout = .flat
+    /// Whether sessions record and show subagent rows; the sidebar and `session.subagent` read it.
+    private(set) var showSubagents = false
     /// Program basenames NOT to re-run on restore: the parsed user-editable `restore-denylist.conf` (seeded
     /// with the terminal multiplexers), read at launch only; consulted via `CommandRestore.shouldRestore`.
     private(set) var restoreDenylist: Set<String> = []
@@ -247,6 +249,10 @@ final class GhosttyApp {
 
     func setFlaggedViewLayout(_ layout: FlaggedViewLayout) {
         flaggedViewLayout = layout
+    }
+
+    func setShowSubagents(_ enabled: Bool) {
+        showSubagents = enabled
     }
 
     func setRestoreDenylist(_ denylist: Set<String>) {

@@ -27,7 +27,12 @@ extension WorkspaceSidebar.Coordinator {
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         guard let node = item as? SidebarNode else { return nil }
-        let identifier = NSUserInterfaceItemIdentifier(node.kind == .workspace ? "workspace-cell" : "session-cell")
+        let cellName = switch node.kind {
+        case .workspace: "workspace-cell"
+        case .session: "session-cell"
+        case .subagent: "subagent-cell"
+        }
+        let identifier = NSUserInterfaceItemIdentifier(cellName)
         let cell = (outlineView.makeView(withIdentifier: identifier, owner: self) as? SidebarCellView) ?? makeCell(identifier: identifier)
 
         let field = cell.textField!
@@ -79,6 +84,8 @@ extension WorkspaceSidebar.Coordinator {
                                                    disconnected: notice != nil)
             cell.imageView?.toolTip = notice
             cell.imageView?.setAccessibilityIdentifier("session-icon")
+        case .subagent:
+            configureSubagentCell(cell, node: node)
         }
         // text/icon colors track the terminal theme; a selected row uses the selection foreground.
         // this build-time tint is a first guess — row(forItem:) can miss (-1) while the row map is in

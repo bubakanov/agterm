@@ -678,6 +678,12 @@ private struct AgentStatusSettingsView: View {
                 SettingHint("Only applies while auto-follow is on.")
             }
 
+            Section("Subagents") {
+                Toggle("Show subagents under their session", isOn: showSubagents)
+                    .accessibilityIdentifier("settings-show-subagents")
+                SettingHint("Lists each subagent an agent starts as a row under its session.")
+            }
+
             Section {
                 Button("Reset to defaults") { model.resetAgentStatus() }
                     .accessibilityIdentifier("settings-status-reset")
@@ -810,6 +816,10 @@ private struct AgentStatusSettingsView: View {
     private var autoFollowAttention: Binding<AppSettings.AutoFollowAttention> {
         Binding(get: { AppSettings.AutoFollowAttention(tolerant: model.settings.autoFollowAttention) },
                 set: { model.setAutoFollowAttention($0 == .off ? nil : $0.rawValue) })
+    }
+
+    private var showSubagents: Binding<Bool> {
+        Binding(get: { model.settings.showSubagents ?? false }, set: { model.setShowSubagents($0) })
     }
 
     /// Inverted view of the stored `autoFollowStayOnActive` so the toggle reads forward — ON = do leave a
