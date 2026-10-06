@@ -200,6 +200,12 @@ public protocol ControlActions {
     func claimOverlayJob(_ job: String) -> ControlResponse
     /// Attach into an open local window, defaulting to the frontmost window after discovery.
     func attachRemoteSession(host: String, session: String, window: String?) async -> ControlResponse
+    /// Apply a `session.subagent` write to the target session's rows.
+    func applySubagentChange(_ change: SubagentChange, target: String?, window: String?) -> ControlResponse
+    /// Open a subagent's transcript over its session.
+    func openSubagent(_ agent: String, target: String?, window: String?) async -> ControlResponse
+    /// Set Show subagents; the response carries the resulting state.
+    func setSubagentRows(_ mode: ControlSubagentRowsMode) -> ControlResponse
 }
 
 /// Routes control commands through a host-provided action seam. The dispatcher owns command parsing and
@@ -222,6 +228,8 @@ public struct ControlDispatcher {
                 .sessionReveal, .sessionMove, .sessionFlag, .sessionContext, .sessionSeen, .sessionStatus,
                 .sessionRestore:
             return await dispatchSessionCommand(request)
+        case .sessionSubagent, .subagents:
+            return await dispatchSubagentCommand(request)
         case .sessionRestart:
             return await dispatchSessionRestart(request)
         case .sessionSplit, .sessionSplitClose, .sessionSwap, .sessionLead, .sessionScratch, .sessionFocus,

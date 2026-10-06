@@ -190,6 +190,8 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
     public var restoreCommand: String?
     /// The split (right) pane's restore-command override, the split analogue of `restoreCommand`.
     public var splitRestoreCommand: String?
+    /// Subagent rows; nil when there are none.
+    public var subagents: SubagentHistory?
 
     public init(id: UUID, paneIdentity: UUID? = nil, splitPaneIdentity: UUID? = nil,
                 customName: String?, cwd: String, isSplit: Bool? = nil, hasSplit: Bool? = nil,
@@ -200,7 +202,7 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
                 splitInitialCommand: String? = nil, splitCommandWait: Bool? = nil,
                 backgroundWatermark: BackgroundWatermark? = nil, paneBackgrounds: PaneBackgrounds? = nil,
                 restoreCommand: String? = nil, splitRestoreCommand: String? = nil,
-                context: String? = nil) {
+                context: String? = nil, subagents: SubagentHistory? = nil) {
         self.id = id
         self.paneIdentity = paneIdentity
         self.splitPaneIdentity = splitPaneIdentity
@@ -224,6 +226,7 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
         self.restoreCommand = restoreCommand
         self.splitRestoreCommand = splitRestoreCommand
         self.context = context
+        self.subagents = subagents
     }
 
     enum CodingKeys: String, CodingKey {
@@ -231,7 +234,7 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
         case fontSize, splitCwd, splitRatio, flagged
         case foregroundCommand, splitForegroundCommand, initialCommand, commandWait
         case splitInitialCommand, splitCommandWait, backgroundWatermark, paneBackgrounds
-        case restoreCommand, splitRestoreCommand, context
+        case restoreCommand, splitRestoreCommand, context, subagents
     }
 
     /// Custom decode so every optional is LOSSY, matching `Snapshot.init(from:)`: an unknown
@@ -273,5 +276,7 @@ public struct SessionSnapshot: Codable, Equatable, Sendable {
         } else {
             context = nil
         }
+        subagents = ((try? c.decodeIfPresent(SubagentHistory.self, forKey: .subagents)) ?? nil)
+            .flatMap { $0.isEmpty ? nil : $0 }
     }
 }

@@ -33,7 +33,8 @@ extension AppStore {
             let writer = indicator.normalizedPane(hasSplit: session.hasSplit) ?? .left
             if owner != writer { return .refused(owner: owner) }
         }
-        setAgentIndicator(indicator, forSession: id)
+        guard let session = session(withID: id) else { return .applied }
+        setAgentIndicator(holdingCompletionForSubagents(indicator, session: session), forSession: id)
         return .applied
     }
 

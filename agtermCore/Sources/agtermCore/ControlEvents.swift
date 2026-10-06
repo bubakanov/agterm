@@ -12,6 +12,7 @@ public enum ControlEventKind: String, Codable, CaseIterable, Sendable, Equatable
     case paneScratch = "pane.scratch"
     case remoteOpened = "remote.opened"
     case remoteClosed = "remote.closed"
+    case subagent
 }
 
 /// Kind-specific event data. Optional fields keep the encoded payload compact while preserving one
@@ -34,11 +35,13 @@ public struct ControlEventPayload: Codable, Sendable, Equatable {
     /// The `remote.opened` / `remote.closed` ssh destination the row is attached to, as `zmx attach` was
     /// given it.
     public var host: String?
+    /// The `subagent` event's subagent id.
+    public var agent: String?
 
     public init(name: String? = nil, status: String? = nil, pane: String? = nil,
                 blink: Bool? = nil, color: String? = nil, shape: String? = nil,
                 previous: String? = nil, title: String? = nil, body: String? = nil,
-                host: String? = nil) {
+                host: String? = nil, agent: String? = nil) {
         self.name = name
         self.status = status
         self.pane = pane
@@ -49,6 +52,7 @@ public struct ControlEventPayload: Codable, Sendable, Equatable {
         self.title = title
         self.body = body
         self.host = host
+        self.agent = agent
     }
 }
 

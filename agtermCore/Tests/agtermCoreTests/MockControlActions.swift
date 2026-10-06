@@ -73,6 +73,9 @@ final class MockControlActions: ControlActions {
         case sidebarVisibility(ControlToggleMode)
         case sidebarViewMode(ControlSidebarViewMode)
         case flaggedViewLayout(ControlFlaggedLayoutMode)
+        case subagentChange(SubagentChange, target: String?, window: String?)
+        case subagentOpen(String, target: String?, window: String?)
+        case subagentRows(ControlSubagentRowsMode)
         case expand(window: String?)
         case collapse(window: String?)
         case sidebarWidth(points: Double, window: String?)
@@ -140,6 +143,7 @@ final class MockControlActions: ControlActions {
     var nextSidebarVisibilityResponse = ControlResponse(ok: true)
     var nextSidebarViewModeResponse = ControlResponse(ok: true)
     var nextFlaggedViewLayoutResponse = ControlResponse(ok: true)
+    var nextSubagentResponse = ControlResponse(ok: true)
     var nextExpandResponse = ControlResponse(ok: true)
     var nextCollapseResponse = ControlResponse(ok: true)
     var nextSidebarWidthResponse = ControlResponse(ok: true)
@@ -549,6 +553,21 @@ final class MockControlActions: ControlActions {
     func setFlaggedViewLayout(_ mode: ControlFlaggedLayoutMode) -> ControlResponse {
         calls.append(.flaggedViewLayout(mode))
         return nextFlaggedViewLayoutResponse
+    }
+
+    func applySubagentChange(_ change: SubagentChange, target: String?, window: String?) -> ControlResponse {
+        calls.append(.subagentChange(change, target: target, window: window))
+        return nextSubagentResponse
+    }
+
+    func openSubagent(_ agent: String, target: String?, window: String?) async -> ControlResponse {
+        calls.append(.subagentOpen(agent, target: target, window: window))
+        return nextSubagentResponse
+    }
+
+    func setSubagentRows(_ mode: ControlSubagentRowsMode) -> ControlResponse {
+        calls.append(.subagentRows(mode))
+        return nextSubagentResponse
     }
 
     func expandSidebar(window: String?) -> ControlResponse {

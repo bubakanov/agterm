@@ -52,7 +52,8 @@ extension AppStore {
                         paneBackgrounds: session.paneBackgrounds.persisted,
                         restoreCommand: session.restoreCommand,
                         splitRestoreCommand: session.splitRestoreCommand,
-                        context: session.context)
+                        context: session.context,
+                        subagents: session.subagents.isEmpty ? nil : session.subagents)
     }
 
     /// The single workspace-to-disk producer, used by the launch snapshot and by a closed workspace's
@@ -89,6 +90,7 @@ extension AppStore {
         session.splitRatio = snapshot.splitRatio.map { min(AppStore.splitRatioMax, max(AppStore.splitRatioMin, $0)) }
         session.flagged = snapshot.flagged ?? false
         session.context = snapshot.context
+        session.subagents = restoredSubagents(snapshot.subagents)
         session.initialCommand = snapshot.initialCommand
         session.commandWait = snapshot.commandWait ?? false
         session.splitInitialCommand = hasSplit ? snapshot.splitInitialCommand : nil

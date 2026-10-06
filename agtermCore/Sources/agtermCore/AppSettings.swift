@@ -316,6 +316,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     /// Whether auto-follow stays put on a running (`active`) session instead of pulling to a blocked one;
     /// nil/false = off. Only meaningful when `autoFollowAttention` is set.
     public var autoFollowStayOnActive: Bool?
+    /// Whether sessions show their agents' subagent rows and record new ones; nil = off.
+    public var showSubagents: Bool?
     /// The sidebar row-text point size, nil for `defaultSidebarFontSize`; the row height scales with it
     /// (`sidebarRowHeight(fontSize:)`). Independent of `interfaceFontSize`.
     public var sidebarFontSize: Double?
@@ -366,7 +368,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
                 newSessionPlacement: String? = nil,
                 confirmCloseSession: Bool? = nil, closeGraceUndoEnabled: Bool? = nil,
                 autoFollowAttention: String? = nil,
-                autoFollowStayOnActive: Bool? = nil, sidebarFontSize: Double? = nil,
+                autoFollowStayOnActive: Bool? = nil, showSubagents: Bool? = nil, sidebarFontSize: Double? = nil,
                 interfaceFontSize: Double? = nil, quickTerminalSizePercent: Int? = nil,
                 hiddenInterfaceElements: [String]? = nil, shownInterfaceElements: [String]? = nil,
                 autoHideSidebarInactiveWindows: Bool? = nil, flaggedViewLayout: String? = nil,
@@ -412,6 +414,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.closeGraceUndoEnabled = closeGraceUndoEnabled
         self.autoFollowAttention = autoFollowAttention
         self.autoFollowStayOnActive = autoFollowStayOnActive
+        self.showSubagents = showSubagents
         self.sidebarFontSize = sidebarFontSize
         self.interfaceFontSize = interfaceFontSize
         self.quickTerminalSizePercent = quickTerminalSizePercent

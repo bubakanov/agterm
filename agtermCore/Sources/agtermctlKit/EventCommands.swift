@@ -83,6 +83,11 @@ enum EventFormatter {
             return "\(time) \(event.kind.rawValue) \(name) \(event.payload.status ?? "")"
         case .remoteOpened, .remoteClosed:
             return "\(time) \(event.kind.rawValue) \(name) host=\(event.payload.host ?? "")"
+        case .subagent:
+            var parts = [time, event.kind.rawValue, name, event.payload.status ?? "-", "agent=\(event.payload.agent ?? "-")"]
+            if let previous = event.payload.previous { parts.append("previous=\(previous)") }
+            if let title = event.payload.title { parts.append("title=\(title)") }
+            return parts.joined(separator: " ")
         }
     }
 }

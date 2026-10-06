@@ -36,6 +36,18 @@ public extension ControlActions {
         ControlResponse(ok: false, error: ControlActionsUnsupported.message("ask.cancel"))
     }
 
+    func applySubagentChange(_: SubagentChange, target _: String?, window _: String?) -> ControlResponse {
+        ControlResponse(ok: false, error: ControlActionsUnsupported.message("session.subagent"))
+    }
+
+    func openSubagent(_: String, target _: String?, window _: String?) async -> ControlResponse {
+        ControlResponse(ok: false, error: ControlActionsUnsupported.message("session.subagent"))
+    }
+
+    func setSubagentRows(_: ControlSubagentRowsMode) -> ControlResponse {
+        ControlResponse(ok: false, error: ControlActionsUnsupported.message("subagents"))
+    }
+
     func setFlaggedViewLayout(_: ControlFlaggedLayoutMode) -> ControlResponse {
         ControlResponse(ok: false, error: ControlActionsUnsupported.message("sidebar.flagged-layout"))
     }

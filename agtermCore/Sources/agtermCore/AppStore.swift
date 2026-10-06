@@ -138,6 +138,8 @@ public final class AppStore {
     @ObservationIgnored public var presentationHub: PresentationHub?
     /// The remote overlay jobs this Mac handed to presenters, shared with the server like the hub.
     @ObservationIgnored public var overlayJobs: OverlayJobs?
+    /// Whether a subagent transcript still exists; injectable so tests need no files.
+    @ObservationIgnored public var subagentTranscriptExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
     /// Told when an attached session's row is shown or leaves, undo and restoration included.
     @ObservationIgnored public var onRemoteRowVisibility: ((Session, Bool) -> Void)?
     @ObservationIgnored let paneFinalizer: (([UUID]) -> Void)?
@@ -293,7 +295,7 @@ public final class AppStore {
                             dashboardFontMode: () -> String? = { nil }, app: AppIdentity? = nil,
                             liveReset: ControlLiveResetReadback? = nil, indexUnsaved: Bool = false,
                             flaggedLayout: FlaggedViewLayout? = nil, htmlZoom: Double? = nil,
-                            linkOpenMode: LinkOpenMode? = nil) -> ControlTree {
+                            linkOpenMode: LinkOpenMode? = nil, subagentRows: Bool? = nil) -> ControlTree {
         let activeID = selectedSessionID
         // `currentWorkspaceID`, not the selected session's owner: an EMPTY destination selects nothing, so
         // deriving this from the selection alone made `tree` name the workspace `workspace.go` just left.
@@ -371,7 +373,10 @@ public final class AppStore {
                                           liveAttribution: mainAttribution?.rawValue, splitLiveAttribution: splitAttribution?.rawValue,
                                           presentation: presentationNode(of: session), presenters: presentersNode(of: session),
                                           remoteOverlays: remoteOverlayNodes(of: session),
-                                          htmlOverlays: htmlOverlayNodes(session, zoom: htmlZoom))
+                                          htmlOverlays: htmlOverlayNodes(session, zoom: htmlZoom),
+                                          subagents: session.subagents.isEmpty ? nil : session.subagents.entries.map(ControlSubagentNode.init),
+                                          subagentsDropped: session.subagents.droppedCount > 0 ? session.subagents.droppedCount : nil,
+                                          subagentConversation: session.subagents.currentConversation)
             }
             return ControlWorkspaceNode(id: workspace.id.uuidString, name: workspace.name,
                                         active: workspace.id == activeWorkspaceID,
@@ -389,7 +394,8 @@ public final class AppStore {
                            dashboardFontSize: dashboardFontSize(),
                            dashboardFontMode: dashboardFontMode(),
                            pickPending: pickPending(), askPending: askPending(), app: app, liveReset: liveReset,
-                           indexUnsaved: indexUnsaved ? true : nil, linkOpenMode: linkOpenMode?.rawValue)
+                           indexUnsaved: indexUnsaved ? true : nil, linkOpenMode: linkOpenMode?.rawValue,
+                           subagentRows: subagentRows)
     }
 
     /// The tree's `paneOverlays`: the panes covered by their own overlay, omitted when neither is.

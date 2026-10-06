@@ -337,6 +337,12 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
     /// htmlOverlays lists the pages in this session's overlay slots, session-wide first then left and right;
     /// omitted when none is open. `overlay` and `paneOverlays` report their slots as covered too.
     public let htmlOverlays: [ControlHtmlOverlayNode]?
+    /// The session's subagent rows, oldest first; omitted when there are none.
+    public let subagents: [ControlSubagentNode]?
+    /// How many older rows the per-session cap evicted; omitted when none.
+    public let subagentsDropped: Int?
+    /// The conversation whose rows the sidebar shows; omitted until an agent reports one.
+    public let subagentConversation: String?
 
     public init(id: String, name: String, cwd: String, title: String? = nil, active: Bool, split: Bool,
                 hasSplit: Bool? = nil, backedByZmx: Bool?, splitAxis: String? = nil,
@@ -355,7 +361,9 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
                 context: String? = nil, remoteHost: String? = nil, splitCwd: String? = nil,
                 liveAttribution: String? = nil, splitLiveAttribution: String? = nil,
                 presentation: ControlPresentationNode? = nil, presenters: ControlPresentersNode? = nil,
-                remoteOverlays: [ControlRemoteOverlayNode]? = nil, htmlOverlays: [ControlHtmlOverlayNode]? = nil) {
+                remoteOverlays: [ControlRemoteOverlayNode]? = nil, htmlOverlays: [ControlHtmlOverlayNode]? = nil,
+                subagents: [ControlSubagentNode]? = nil, subagentsDropped: Int? = nil,
+                subagentConversation: String? = nil) {
         self.id = id
         self.name = name
         self.cwd = cwd
@@ -405,6 +413,34 @@ public struct ControlSessionNode: Codable, Sendable, Equatable {
         self.presenters = presenters
         self.remoteOverlays = remoteOverlays
         self.htmlOverlays = htmlOverlays
+        self.subagents = subagents
+        self.subagentsDropped = subagentsDropped
+        self.subagentConversation = subagentConversation
+    }
+}
+
+/// One subagent row on `ControlSessionNode.subagents`. Times are epoch seconds, like `statusChangedAt`.
+public struct ControlSubagentNode: Codable, Sendable, Equatable {
+    public let id: String
+    public let type: String?
+    public let description: String?
+    public let status: String
+    public let activity: String?
+    public let startedAt: Double
+    public let endedAt: Double?
+    public let transcript: String?
+    public let conversation: String?
+
+    public init(_ subagent: Subagent) {
+        id = subagent.id
+        type = subagent.agentType
+        description = subagent.summary
+        status = subagent.status.rawValue
+        activity = subagent.activity
+        startedAt = subagent.startedAt.timeIntervalSince1970
+        endedAt = subagent.endedAt?.timeIntervalSince1970
+        transcript = subagent.transcriptPath
+        conversation = subagent.conversationID
     }
 }
 
@@ -655,6 +691,8 @@ public struct ControlTree: Codable, Sendable, Equatable {
     /// indexUnsaved is true while the last `windows.json` write failed, omitted otherwise. App-global like
     /// `app`.
     public let indexUnsaved: Bool?
+    /// Whether Settings ▸ Agent Status ▸ Show subagents is on. App-wide; the read side of `subagents`.
+    public let subagentRows: Bool?
 
     public init(workspaces: [ControlWorkspaceNode], idleMs: Int? = nil, autoFollowMs: Int? = nil,
                 sidebarVisible: Bool? = nil, sidebarMode: String? = nil, sidebarFlaggedLayout: String? = nil,
@@ -664,9 +702,10 @@ public struct ControlTree: Codable, Sendable, Equatable {
                 dashboardHighlighted: String? = nil, dashboardFontSize: Double? = nil,
                 dashboardFontMode: String? = nil, pickPending: String? = nil, askPending: String? = nil,
                 app: AppIdentity? = nil, liveReset: ControlLiveResetReadback? = nil,
-                indexUnsaved: Bool? = nil, linkOpenMode: String? = nil) {
+                indexUnsaved: Bool? = nil, linkOpenMode: String? = nil, subagentRows: Bool? = nil) {
         self.workspaces = workspaces
         self.linkOpenMode = linkOpenMode
+        self.subagentRows = subagentRows
         self.liveReset = liveReset
         self.indexUnsaved = indexUnsaved
         self.idleMs = idleMs

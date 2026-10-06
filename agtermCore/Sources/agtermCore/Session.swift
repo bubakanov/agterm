@@ -115,6 +115,8 @@ public final class Session: Identifiable {
     /// Per-session agent status, driven over the control channel (`session.status`); the sidebar row's
     /// status glyph reacts. Ephemeral.
     public var agentIndicator = AgentIndicator()
+    /// Subagent rows reported over `session.subagent.*`; persisted, and closed with the session.
+    public var subagents = SubagentHistory()
 
     /// Last time the status was set, idle and repeated values included; nil before any set, never persisted.
     /// Must stay a wall-clock `Date`: `controlTree` ships it as epoch seconds compared against `ControlEvent.ts`,

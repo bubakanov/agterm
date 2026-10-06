@@ -27,6 +27,8 @@ public enum Command: String, Codable, Sendable {
     case sessionContext = "session.context"
     case sessionSeen = "session.seen"
     case sessionRestore = "session.restore"
+    case sessionSubagent = "session.subagent"
+    case subagents
     case sessionRestart = "session.restart"
     case sessionBackground = "session.background"
     case sessionSplit = "session.split"
@@ -393,6 +395,15 @@ public struct ControlArgs: Codable, Sendable, Equatable {
     public var value: String?
     /// page is the page id `session.overlay.result` reads the outcome of, instead of a program's exit status.
     public var page: String?
+    /// The subagent `session.subagent` acts on, as its reporting agent names it.
+    public var agent: String?
+    /// The `session.subagent` row's agent type, such as `general-purpose`.
+    public var agentType: String?
+    /// The `session.subagent` row's current activity, such as the command it runs.
+    public var activity: String?
+    /// The reporting agent's conversation for `session.subagent`: tags a `start`, or names the
+    /// conversation a `conversation` action switches the session to.
+    public var conversation: String?
 
     public init(name: String? = nil, cwd: String? = nil, targets: [String]? = nil,
                 workspace: String? = nil, workspaceName: String? = nil,
@@ -421,7 +432,8 @@ public struct ControlArgs: Codable, Sendable, Equatable {
                 close: Bool? = nil, fontSize: Double? = nil, autoSize: Bool? = nil, mru: Bool? = nil,
                 html: String? = nil, current: Bool? = nil, navigation: Bool? = nil, url: String? = nil,
                 javascript: Bool? = nil, value: String? = nil, page: String? = nil, chromeless: Bool? = nil,
-                persistent: Bool? = nil, browse: Bool? = nil) {
+                persistent: Bool? = nil, browse: Bool? = nil, agent: String? = nil, agentType: String? = nil,
+                activity: String? = nil, conversation: String? = nil) {
         self.name = name
         self.cwd = cwd
         self.targets = targets
@@ -508,6 +520,10 @@ public struct ControlArgs: Codable, Sendable, Equatable {
         self.chromeless = chromeless
         self.persistent = persistent
         self.browse = browse
+        self.agent = agent
+        self.agentType = agentType
+        self.activity = activity
+        self.conversation = conversation
     }
 }
 
